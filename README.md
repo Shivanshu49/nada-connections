@@ -179,5 +179,12 @@ body is the server's own HTML, not JSON.
 
 ## AI tools used
 
-> **TODO (Shivanshu): describe which AI tools you used, what for, and what you checked or
-> changed yourself.**
+- **Claude (claude.ai)**: to break the spec into a phased plan and list edge cases (UTF-8 byte
+  length, 400-before-404 ordering, duplicate edges).
+- **Claude Code**: to write the code one phase at a time, with one commit per phase. It ran the
+  tests and curl checks as it built. I reviewed each phase's diff before moving on to the next,
+  and asked it to explain any design choice I wasn't sure about.
+- Before submitting, I re-ran the full test suite and every README curl example myself against
+  a fresh build.
+- I chose the stack and approach (JDK HttpServer instead of a framework, level-by-level BFS,
+  in-memory store) and gave them to Claude Code as fixed constraints.
