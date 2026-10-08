@@ -34,6 +34,9 @@ class ApiHandler implements HttpHandler {
         if (path.equals("/people")) {
             requireMethod(exchange, "POST");
             createPerson(exchange);
+        } else if (path.equals("/knows")) {
+            requireMethod(exchange, "POST");
+            createConnection(exchange);
         } else {
             throw new ApiException(404, "not found");
         }
@@ -47,6 +50,18 @@ class ApiHandler implements HttpHandler {
         }
         // Stored exactly as sent (no trimming), so any script round-trips unchanged.
         Http.send(exchange, 201, store.create(name.asText()));
+    }
+
+    private void createConnection(HttpExchange exchange) throws IOException {
+        JsonNode body = Http.readObject(exchange);
+        long a = Http.requireLong(body, "a");
+        long b = Http.requireLong(body, "b");
+        if (a == b) {
+            throw new ApiException(400, "a and b must be different people");
+        }
+        // Only now look the people up, so a bad request is a 400 even if the IDs are unknown.
+        store.connect(a, b);
+        Http.sendNoContent(exchange);
     }
 
     private static void requireMethod(HttpExchange exchange, String method) {
