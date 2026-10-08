@@ -1,5 +1,6 @@
 package com.nada;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -36,6 +37,11 @@ public class PersonStore {
         // Fine for this API; wrap both in a lock if strict consistency is ever needed.
         adjacency.get(a).add(b);
         adjacency.get(b).add(a);
+    }
+
+    public Set<Long> neighbours(long id) {
+        require(id);
+        return Collections.unmodifiableSet(adjacency.get(id));
     }
 
     public List<Person> contacts(long id) {
