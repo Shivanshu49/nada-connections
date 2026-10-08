@@ -6,10 +6,13 @@ import com.sun.net.httpserver.HttpHandler;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /** Routes every request by method and path, and turns any failure into a JSON error. */
 class ApiHandler implements HttpHandler {
     private static final Logger LOG = Logger.getLogger(ApiHandler.class.getName());
+    private static final Pattern CONTACTS_PATH = Pattern.compile("/people/([^/]*)/contacts");
 
     private final PersonStore store;
 
@@ -31,12 +34,16 @@ class ApiHandler implements HttpHandler {
 
     private void route(HttpExchange exchange) throws IOException {
         String path = exchange.getRequestURI().getPath();
+        Matcher contacts = CONTACTS_PATH.matcher(path);
         if (path.equals("/people")) {
             requireMethod(exchange, "POST");
             createPerson(exchange);
         } else if (path.equals("/knows")) {
             requireMethod(exchange, "POST");
             createConnection(exchange);
+        } else if (contacts.matches()) {
+            requireMethod(exchange, "GET");
+            listContacts(exchange, contacts.group(1));
         } else {
             throw new ApiException(404, "not found");
         }
@@ -62,6 +69,11 @@ class ApiHandler implements HttpHandler {
         // Only now look the people up, so a bad request is a 400 even if the IDs are unknown.
         store.connect(a, b);
         Http.sendNoContent(exchange);
+    }
+
+    private void listContacts(HttpExchange exchange, String rawId) throws IOException {
+        long id = Http.parseId(rawId, "id");
+        Http.send(exchange, 200, store.contacts(id));
     }
 
     private static void requireMethod(HttpExchange exchange, String method) {
