@@ -13,7 +13,7 @@ public final class App {
     public static HttpServer start(int port) throws IOException {
         PersonStore store = new PersonStore();
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
-        server.createContext("/", new ApiHandler(store));
+        server.createContext("/", new ApiHandler(store, new PathFinder(store)));
         // The default executor handles one request at a time; a pool lets requests run in
         // parallel, which is why PersonStore is thread-safe.
         server.setExecutor(Executors.newCachedThreadPool());

@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -15,9 +18,11 @@ class ApiHandler implements HttpHandler {
     private static final Pattern CONTACTS_PATH = Pattern.compile("/people/([^/]*)/contacts");
 
     private final PersonStore store;
+    private final PathFinder pathFinder;
 
-    ApiHandler(PersonStore store) {
+    ApiHandler(PersonStore store, PathFinder pathFinder) {
         this.store = store;
+        this.pathFinder = pathFinder;
     }
 
     @Override
@@ -44,6 +49,9 @@ class ApiHandler implements HttpHandler {
         } else if (contacts.matches()) {
             requireMethod(exchange, "GET");
             listContacts(exchange, contacts.group(1));
+        } else if (path.equals("/path")) {
+            requireMethod(exchange, "GET");
+            findPath(exchange);
         } else {
             throw new ApiException(404, "not found");
         }
@@ -76,10 +84,25 @@ class ApiHandler implements HttpHandler {
         Http.send(exchange, 200, store.contacts(id));
     }
 
+    private void findPath(HttpExchange exchange) throws IOException {
+        Map<String, String> params = Http.queryParams(exchange.getRequestURI().getRawQuery());
+        long from = Http.parseId(params.get("from"), "from");
+        long to = Http.parseId(params.get("to"), "to");
+        Optional<List<Person>> path = pathFinder.find(from, to);
+        if (path.isEmpty()) {
+            Http.send(exchange, 200, Map.of("connected", false));
+            return;
+        }
+        Http.send(exchange, 200, new PathFound(true, path.get().size() - 1, path.get()));
+    }
+
     private static void requireMethod(HttpExchange exchange, String method) {
         if (!exchange.getRequestMethod().equals(method)) {
             exchange.getResponseHeaders().set("Allow", method);
             throw new ApiException(405, "method not allowed");
         }
+    }
+
+    private record PathFound(boolean connected, int hops, List<Person> path) {
     }
 }
